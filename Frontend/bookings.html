@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>My Bookings</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<h2>My Booked Events</h2>
+
+<ul id="bookingList"></ul>
+
+<script>
+
+const bookings=["AI Workshop","Cyber Security Seminar"]
+
+const list=document.getElementById("bookingList")
+
+bookings.forEach(event=>{
+const li=document.createElement("li")
+li.textContent=event
+list.appendChild(li)
+})
+
+</script>
+
+</body>
+</html>
