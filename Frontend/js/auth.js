@@ -1,20 +1,68 @@
-document.getElementById("loginForm")?.addEventListener("submit",function(e){
+// ── auth.js ──
 
-e.preventDefault()
+// Register
+document.getElementById('registerForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('reg-btn');
+  btn.innerHTML = '<span>Creating account…</span>';
+  btn.disabled = true;
 
-alert("Login Successful")
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const city = document.getElementById('reg-city').value.trim();
 
-window.location.href="index.html"
+  if (password.length < 8) {
+    showToast('Password must be at least 8 characters', 'error');
+    btn.innerHTML = '<span>Create Account</span><span>→</span>';
+    btn.disabled = false;
+    return;
+  }
 
-})
+  const users = getUsers();
+  if (users.find(u => u.email === email)) {
+    showToast('Email already registered. Sign in instead.', 'error');
+    btn.innerHTML = '<span>Create Account</span><span>→</span>';
+    btn.disabled = false;
+    return;
+  }
 
+  const newUser = { _id: generateId(), name, email, password, city, role: 'user', createdAt: new Date().toISOString() };
+  users.push(newUser);
+  saveUsers(users);
 
-document.getElementById("registerForm")?.addEventListener("submit",function(e){
+  showToast('Account created successfully!', 'success');
+  setTimeout(() => window.location.href = 'login.html', 1200);
+});
 
-e.preventDefault()
+// Login
+document.getElementById('loginForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span>Signing in…</span>';
+  btn.disabled = true;
 
-alert("Account Created")
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
 
-window.location.href="login.html"
+  const users = getUsers();
+  const user = users.find(u => u.email === email);
 
-})
+  if (!user) {
+    showToast('No account found with this email', 'error');
+    btn.innerHTML = '<span>Sign In</span><span>→</span>';
+    btn.disabled = false;
+    return;
+  }
+
+  if (user.password !== password) {
+    showToast('Incorrect password', 'error');
+    btn.innerHTML = '<span>Sign In</span><span>→</span>';
+    btn.disabled = false;
+    return;
+  }
+
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  showToast(`Welcome back, ${user.name.split(' ')[0]}! 🎉`, 'success');
+  setTimeout(() => window.location.href = 'index.html', 1000);
+});

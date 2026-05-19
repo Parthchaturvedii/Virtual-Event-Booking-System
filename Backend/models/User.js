@@ -1,23 +1,45 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: [true, "Name is required"], trim: true },
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Invalid email"],
+    },
+    password: { type: String, required: [true, "Password is required"], minlength: 8, select: false },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    city: { type: String, trim: true, default: "" },
+    avatar: { type: String, default: "" },
+    isActive: { type: Boolean, default: true },
+    lastLogin: { type: Date },
+    loginCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
 
-name:{
-type:String,
-required:true
-},
+// Hash password before save
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
 
-email:{
-type:String,
-required:true,
-unique:true
-},
+// Compare password method
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
-password:{
-type:String,
-required:true
-}
+// Return safe user object (no password)
+userSchema.methods.toSafeObject = function () {
+  const obj = this.toObject();
+  delete obj.password;
+  return obj;
+};
 
-})
-
-module.exports = mongoose.model("User",userSchema)
+module.exports = mongoose.model("User", userSchema);

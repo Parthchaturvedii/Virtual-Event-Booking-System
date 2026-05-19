@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Events Near Me — Eventify</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="aurora-bg"><div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div></div>
+<div class="grid-overlay"></div>
+
+<button class="menu-btn" onclick="toggleSidebar()">☰</button>
+<div id="sidebarMount"></div>
+
+<div class="app-shell z1">
+  <div style="width:256px;flex-shrink:0"></div>
+  <main class="main">
+
+    <div class="page-header fade-up">
+      <div>
+        <h1>Events Near Me 📍</h1>
+        <p id="locSubtitle">Fetching your location…</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="detectLoc()"><span>🎯</span> Re-detect</button>
+        <select id="radiusSel" onchange="applyFilters()" class="filter-select">
+          <option value="50">Within 50 km</option>
+          <option value="100" selected>Within 100 km</option>
+          <option value="500">All India</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live location pill -->
+    <div id="locPill" style="display:flex;align-items:center;gap:12px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:var(--r);padding:12px 18px;margin-bottom:24px;font-size:0.86rem;color:var(--text2)" class="fade-up d1">
+      <div class="loc-pulse"></div>
+      <span id="locPillText">Detecting your GPS location…</span>
+      <div id="coordsSpan" style="margin-left:auto;font-size:0.75rem;color:var(--muted);font-family:monospace"></div>
+    </div>
+
+    <!-- MAP -->
+    <div class="map-wrap fade-up d2">
+      <div class="map-grid-pattern"></div>
+
+      <!-- City dots will be injected by JS -->
+      <div id="mapDots"></div>
+
+      <!-- User position dot -->
+      <div id="userDot" style="display:none">
+        <div class="map-pulse" id="userPulse" style="width:20px;height:20px;left:50%;top:50%"></div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--emerald);border-radius:50%;z-index:3;border:2px solid white;box-shadow:0 0 12px var(--emerald)"></div>
+        <div id="userLabel" style="position:absolute;left:50%;top:calc(50% + 14px);transform:translateX(-50%);font-size:0.68rem;font-weight:700;color:var(--emerald);white-space:nowrap;z-index:3">📍 You</div>
+      </div>
+
+      <div class="map-info-box">
+        🗺️ Showing: <strong id="mapInfoCity" style="color:var(--text)">All Cities</strong>
+        <span id="mapInfoCount" style="margin-left:8px;color:var(--muted)"></span>
+      </div>
+      <div class="map-legend">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Category</div>
+        <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--cyan)"></div>Tech</div>
+        <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--emerald)"></div>Design</div>
+        <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--gold)"></div>Business</div>
+        <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--rose)"></div>Health</div>
+        <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--violet)"></div>Science</div>
+      </div>
+    </div>
+
+    <!-- City Filter -->
+    <div class="filter-bar fade-up d3" id="cityFilter">
+      <button class="filter-chip active" onclick="setCity(this,'all')">All Cities</button>
+    </div>
+
+    <!-- Results -->
+    <div class="sec-title">📍 Events in <span id="citySectionName">Your Area</span></div>
+    <div id="nearbyGrid" class="events-grid"></div>
+
+  </main>
+</div>
+
+<!-- Detail Modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-top">
+      <h3 class="modal-title" id="detailTitle"></h3>
+      <button class="modal-x" onclick="document.getElementById('detailOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+    <div class="modal-footer" id="detailFooter"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/layout.js"></script>
+<script>
+renderSidebar('nearby');
+const user = initLayout();
+if (!user) throw new Error();
+
+const catColor = { tech:'var(--cyan)', design:'var(--emerald)', business:'var(--gold)', health:'var(--rose)', science:'var(--violet)', arts:'var(--rose)' };
+
+// City map positions (% from left, % from top — rough India outline)
+const CITIES = {
+  'Delhi':     { x:38, y:22 }, 'Mumbai':    { x:22, y:54 },
+  'Bengaluru': { x:33, y:72 }, 'Hyderabad': { x:38, y:62 },
+  'Chennai':   { x:41, y:76 }, 'Pune':      { x:27, y:57 },
+  'Kolkata':   { x:67, y:42 }, 'Ahmedabad': { x:22, y:44 },
+};
+
+let activeCity = 'all';
+let userCity   = localStorage.getItem('ef_userCity') || '';
+let userCoords = null;
+
+function renderMap(highlightCity) {
+  const mapEl  = document.getElementById('mapDots');
+  const events = lsGet('ef_events');
+  mapEl.innerHTML = '';
+
+  Object.entries(CITIES).forEach(([city, pos]) => {
+    const cityEvs = events.filter(e => e.city === city);
+    if (!cityEvs.length) return;
+    const isHi = highlightCity === 'all' || highlightCity === city;
+    const firstCat = cityEvs[0].category;
+    const col = catColor[firstCat] || 'var(--violet)';
+
+    // Pulse ring
+    if (isHi) {
+      const ring = document.createElement('div');
+      ring.className = 'map-dot-ring';
+      ring.style.cssText = `left:${pos.x}%;top:${pos.y}%;border-color:${col};opacity:0.5`;
+      mapEl.appendChild(ring);
+    }
+
+    // Dot
+    const dot = document.createElement('div');
+    dot.className = 'map-dot';
+    dot.style.cssText = `left:${pos.x}%;top:${pos.y}%;background:${col};opacity:${isHi?1:0.25};border:2px solid rgba(255,255,255,0.3);box-shadow:${isHi?`0 0 14px ${col}`:'none'}`;
+    dot.title = `${city} — ${cityEvs.length} event${cityEvs.length!==1?'s':''}`;
+    dot.onclick = () => setCity(null, city, true);
+    mapEl.appendChild(dot);
+
+    // Label
+    const lbl = document.createElement('div');
+    lbl.className = 'map-label';
+    lbl.style.cssText = `left:${pos.x}%;top:calc(${pos.y}% + 10px);color:${isHi?'var(--text)':'var(--muted)'}`;
+    lbl.textContent = city;
+    mapEl.appendChild(lbl);
+  });
+
+  // User location dot
+  if (userCoords && CITIES[userCity]) {
+    const p = CITIES[userCity];
+    const ud = document.getElementById('userDot');
+    const up = document.getElementById('userPulse');
+    const ul = document.getElementById('userLabel');
+    ud.style.display = 'block';
+    [ud, up, ul].forEach(el => { el.style.left = `${p.x}%`; el.style.top = `${p.y}%`; });
+  }
+
+  const count = highlightCity === 'all' ? events.length : events.filter(e => e.city === highlightCity).length;
+  document.getElementById('mapInfoCity').textContent = highlightCity === 'all' ? 'All Cities' : highlightCity;
+  document.getElementById('mapInfoCount').textContent = `${count} event${count!==1?'s':''}`;
+}
+
+function buildCityFilter() {
+  const bar    = document.getElementById('cityFilter');
+  const events = lsGet('ef_events');
+  const cities = [...new Set(events.map(e => e.city).filter(Boolean))].sort();
+  bar.innerHTML = `<button class="filter-chip ${activeCity==='all'?'active':''}" onclick="setCity(this,'all')">All Cities</button>`;
+  cities.forEach(c => {
+    bar.insertAdjacentHTML('beforeend',
+      `<button class="filter-chip ${activeCity===c?'active':''}" onclick="setCity(this,'${c}')">${c}</button>`);
+  });
+}
+
+function setCity(btn, city, fromMap = false) {
+  activeCity = city;
+  document.querySelectorAll('#cityFilter .filter-chip').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    document.querySelectorAll('#cityFilter .filter-chip').forEach(c => {
+      if (c.textContent === city || (city === 'all' && c.textContent === 'All Cities')) c.classList.add('active');
+    });
+  }
+  document.getElementById('citySectionName').textContent = city === 'all' ? 'Your Area' : city;
+  renderMap(city);
+  applyFilters();
+}
+
+function applyFilters() {
+  const events   = lsGet('ef_events');
+  const bookings = lsGet('ef_bookings');
+  const myActive = bookings.filter(b => b.userId === user._id && b.status !== 'cancelled');
+  const grid     = document.getElementById('nearbyGrid');
+
+  let filtered = events;
+  if (activeCity !== 'all') filtered = filtered.filter(e => e.city === activeCity);
+
+  document.getElementById('locSubtitle').textContent = filtered.length + ` event${filtered.length!==1?'s':''} ${activeCity==='all'?'across all cities':'in '+activeCity}`;
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📍</div><h3>No events here</h3><p>Try a different city</p></div>`;
+    return;
+  }
+  grid.innerHTML = '';
+  filtered.forEach((ev, i) => {
+    const booked = myActive.some(b => b.eventId === ev._id);
+    const left   = seatsLeft(ev);
+    const actions = booked
+      ? `<span class="badge badge-emerald" style="padding:9px 14px">✓ Booked</span>`
+      : `<button class="btn btn-glow btn-sm" onclick="bookEvent('${ev._id}')" ${left<=0?'disabled':''}>
+          ${left<=0?'Sold Out':'Book Now'}
+         </button>
+         <button class="btn btn-outline btn-sm" onclick="openDetail('${ev._id}')">Details</button>`;
+    grid.insertAdjacentHTML('beforeend', buildCard(ev, actions, i*0.06));
+  });
+}
+
+function detectLoc() {
+  const txt = document.getElementById('locPillText');
+  const coords = document.getElementById('coordsSpan');
+  txt.textContent = 'Detecting GPS…';
+  navigator.geolocation?.getCurrentPosition(pos => {
+    userCoords = pos.coords;
+    const { latitude: lat, longitude: lng } = pos.coords;
+    coords.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    // Rough city matching
+    const cityMap = [
+      { city:'Delhi',     lat:28.61, lng:77.20 },
+      { city:'Mumbai',    lat:19.07, lng:72.87 },
+      { city:'Bengaluru', lat:12.97, lng:77.59 },
+      { city:'Hyderabad', lat:17.38, lng:78.47 },
+      { city:'Chennai',   lat:13.08, lng:80.27 },
+      { city:'Pune',      lat:18.52, lng:73.85 },
+      { city:'Kolkata',   lat:22.57, lng:88.36 },
+      { city:'Ahmedabad', lat:23.02, lng:72.57 },
+    ];
+    let best = cityMap[0], bestDist = Infinity;
+    cityMap.forEach(c => {
+      const d = Math.sqrt((c.lat-lat)**2 + (c.lng-lng)**2);
+      if (d < bestDist) { bestDist = d; best = c; }
+    });
+    userCity = best.city;
+    localStorage.setItem('ef_userCity', userCity);
+    const nearby = lsGet('ef_events').filter(e => e.city === userCity);
+    txt.innerHTML = `<strong style="color:var(--emerald)">📍 ${userCity}</strong> — ${nearby.length} event${nearby.length!==1?'s':''} near you`;
+    setCity(null, userCity, true);
+    toast(`Location detected: ${userCity} 📍`, 's');
+  }, () => {
+    txt.textContent = userCity ? `Using saved location: ${userCity}` : 'Location access denied';
+    if (userCity) { setCity(null, userCity); }
+  }, { timeout: 8000 });
+}
+
+function openDetail(eventId) {
+  const ev     = lsGet('ef_events').find(e => e._id === eventId);
+  if (!ev) return;
+  const pct    = seatsPct(ev);
+  const left   = seatsLeft(ev);
+  const booked = lsGet('ef_bookings').some(b => b.userId === user._id && b.eventId === eventId && b.status !== 'cancelled');
+  document.getElementById('detailTitle').textContent = ev.title;
+  document.getElementById('detailBody').innerHTML = `
+    <div style="background:${catBg(ev.category)};border-radius:var(--r);padding:20px;text-align:center;font-size:2.5rem;margin-bottom:16px">${catEmoji(ev.category)}</div>
+    <p style="color:var(--text2);font-size:0.88rem;line-height:1.75;margin-bottom:16px">${ev.description||''}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      ${[['📅','Date',fmtDate(ev.date)],['🎤','Speaker',ev.speaker],['📍','City',ev.city||'Online'],['💺','Seats',`${left} left`]].map(([i,l,v])=>`
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:11px">
+        <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${l}</div>
+        <div style="font-size:0.86rem;font-weight:600">${i} ${v}</div>
+      </div>`).join('')}
+    </div>
+    <div class="seat-bar"><div class="seat-fill ${seatClass(pct)}" style="width:${pct}%"></div></div>`;
+  document.getElementById('detailFooter').innerHTML = booked
+    ? `<span class="badge badge-emerald" style="padding:11px 18px">✓ Booked</span>`
+    : `<button class="btn btn-glow" onclick="bookEvent('${ev._id}');document.getElementById('detailOverlay').classList.remove('open')" style="flex:1;justify-content:center" ${left<=0?'disabled':''}>${left<=0?'Sold Out':'Book Now'}</button>`;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+document.getElementById('detailOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+// Init
+buildCityFilter();
+renderMap('all');
+applyFilters();
+detectLoc();
+</script>
+</body>
+</html>

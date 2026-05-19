@@ -1,19 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Event Details</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browse Events — Eventify</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
+<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
 
-<h1>Event Details</h1>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">E</div>
+      <h2>Eventify</h2>
+      <span>Virtual Events Platform</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="events.html" class="nav-item active"><span class="nav-icon">🎯</span> Browse Events</a>
+      <a href="nearby.html" class="nav-item"><span class="nav-icon">📍</span> Near Me</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">My Space</div>
+      <a href="bookings.html" class="nav-item"><span class="nav-icon">🎟️</span> My Bookings <span class="nav-badge" id="bookingCount">0</span></a>
+      <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span> Profile</a>
+    </div>
+    <div class="nav-section" id="adminNavSection" style="display:none">
+      <div class="nav-section-label">Admin</div>
+      <a href="admin.html" class="nav-item"><span class="nav-icon">⚙️</span> Admin Panel</a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="sidebarAvatar">U</div>
+        <div>
+          <div class="user-name" id="sidebarName">Loading…</div>
+          <div class="user-role" id="sidebarRole">Member</div>
+        </div>
+        <button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem" title="Logout">⏏</button>
+      </div>
+    </div>
+  </aside>
 
-<div id="eventDetails"></div>
+  <main class="main-content">
+    <div class="page-header slide-up">
+      <div class="page-header-left">
+        <h1>Browse Events</h1>
+        <p id="eventsCount">Loading events…</p>
+      </div>
+      <button class="btn btn-primary" onclick="openAddEventModal()" id="addEventBtn" style="display:none">
+        <span>+</span> Add Event
+      </button>
+    </div>
 
-<button onclick="bookEvent()">Book Event</button>
+    <!-- Filter Bar -->
+    <div class="filter-bar slide-up stagger-1">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search events, speakers…" oninput="filterEvents()">
+      </div>
+      <button class="filter-chip active" data-filter="all" onclick="setFilter(this,'all')">All</button>
+      <button class="filter-chip" data-filter="tech" onclick="setFilter(this,'tech')">Tech</button>
+      <button class="filter-chip" data-filter="design" onclick="setFilter(this,'design')">Design</button>
+      <button class="filter-chip" data-filter="business" onclick="setFilter(this,'business')">Business</button>
+      <button class="filter-chip" data-filter="health" onclick="setFilter(this,'health')">Health</button>
+      <select class="filter-select" id="sortSelect" onchange="filterEvents()">
+        <option value="date">Sort: Date</option>
+        <option value="seats">Sort: Seats</option>
+        <option value="title">Sort: A–Z</option>
+      </select>
+    </div>
 
-<script src="js/main.js"></script>
+    <!-- Events Grid -->
+    <div id="eventsContainer" class="events-grid"></div>
+  </main>
+</div>
 
+<!-- Event Detail Modal -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Event Details</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div style="display:flex;gap:10px;margin-top:24px" id="modalActions"></div>
+  </div>
+</div>
+
+<!-- Add Event Modal (Admin) -->
+<div class="modal-overlay" id="addEventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Create New Event</h3>
+      <button class="modal-close" onclick="document.getElementById('addEventModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="input-group"><label>Event Title</label><input id="ae-title" placeholder="e.g. AI Workshop 2026"></div>
+      <div class="input-group"><label>Description</label><textarea id="ae-desc" rows="3" placeholder="Describe the event…" style="resize:vertical"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="input-group"><label>Date</label><input type="date" id="ae-date"></div>
+        <div class="input-group"><label>Category</label>
+          <select id="ae-category">
+            <option value="tech">Tech</option>
+            <option value="design">Design</option>
+            <option value="business">Business</option>
+            <option value="health">Health</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="input-group"><label>Speaker</label><input id="ae-speaker" placeholder="Dr. Sharma"></div>
+        <div class="input-group"><label>Total Seats</label><input type="number" id="ae-seats" placeholder="100" min="1"></div>
+      </div>
+      <div class="input-group"><label>Meeting Link</label><input id="ae-link" placeholder="https://meet.google.com/…"></div>
+      <div class="input-group"><label>City</label><input id="ae-city" placeholder="Delhi"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button class="btn btn-primary" onclick="submitAddEvent()" style="flex:1;justify-content:center;border-radius:var(--radius-sm)">Create Event</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('addEventModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+<script src="js/events.js"></script>
 </body>
 </html>

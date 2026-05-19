@@ -1,27 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Register</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Create Account — Eventify</title>
 <link rel="stylesheet" href="css/style.css">
+<style>
+  body { overflow: hidden; }
+  @media(max-width:860px){ body{ overflow:auto; } }
+  .counter-row { display: flex; gap: 32px; margin-top: 44px; }
+  .counter-item .val {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .counter-item .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+</style>
 </head>
-
 <body>
+<!-- Aurora -->
+<div class="aurora-bg" style="position:fixed">
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+  <div class="aurora-blob"></div>
+</div>
+<div class="grid-overlay"></div>
 
-<h2>Create Account</h2>
+<div class="auth-shell" style="position:relative;z-index:1">
 
-<form id="registerForm">
+  <!-- ── Left Visual ── -->
+  <div class="auth-visual fade-in">
+    <!-- Subtle radial glow -->
+    <div style="position:absolute;top:-200px;right:-200px;width:700px;height:700px;background:radial-gradient(circle,rgba(168,85,247,0.12),transparent 60%);pointer-events:none"></div>
 
-<input type="text" placeholder="Name" required><br><br>
+    <div class="auth-visual-content">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:99px;padding:6px 14px;font-size:0.75rem;color:var(--gold);font-weight:600;margin-bottom:28px">
+        ✦ &nbsp;India's #1 Virtual Event Platform
+      </div>
 
-<input type="email" placeholder="Email" required><br><br>
+      <h1>
+        Learn. Connect.<br>
+        <span>Grow Together.</span>
+      </h1>
+      <p>Join 12,000+ learners who attend world-class events, workshops, and bootcamps every week — all from home.</p>
 
-<input type="password" placeholder="Password" required><br><br>
+      <div class="auth-features">
+        <div class="auth-feat fade-up d1">
+          <div class="auth-feat-icon">🎯</div>
+          <div class="auth-feat-text">
+            <h4>Curated Events</h4>
+            <p>Hand-picked workshops, seminars & bootcamps from top experts</p>
+          </div>
+        </div>
+        <div class="auth-feat fade-up d2">
+          <div class="auth-feat-icon">📍</div>
+          <div class="auth-feat-text">
+            <h4>Events Near You</h4>
+            <p>Real-time geolocation shows events in your exact city</p>
+          </div>
+        </div>
+        <div class="auth-feat fade-up d3">
+          <div class="auth-feat-icon">🎟️</div>
+          <div class="auth-feat-text">
+            <h4>One-Click Booking</h4>
+            <p>Instant seat confirmation with live availability tracking</p>
+          </div>
+        </div>
+      </div>
 
-<button type="submit">Register</button>
+      <div class="counter-row">
+        <div class="counter-item">
+          <div class="val">12K+</div>
+          <div class="lbl">Active Learners</div>
+        </div>
+        <div class="counter-item">
+          <div class="val">400+</div>
+          <div class="lbl">Events/Month</div>
+        </div>
+        <div class="counter-item">
+          <div class="val">50+</div>
+          <div class="lbl">Cities</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-</form>
+  <!-- ── Right Form ── -->
+  <div class="auth-form-panel">
+    <div class="auth-form-inner fade-up">
+      <div class="auth-logo-mark">E</div>
+      <h2 class="auth-heading">Create your account</h2>
+      <p class="auth-sub">Start your learning journey — it's free forever</p>
 
-<script src="js/auth.js"></script>
+      <form class="auth-form" id="regForm" autocomplete="off">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="r-name" placeholder="Arjun Sharma" required autocomplete="name">
+        </div>
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="r-email" placeholder="arjun@example.com" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="r-pw" placeholder="Min. 8 characters" required>
+            <button type="button" class="pw-eye" onclick="togglePw('r-pw',this)">👁</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="r-city" placeholder="Delhi, Mumbai, Bengaluru…">
+        </div>
 
+        <label style="display:flex;align-items:center;gap:10px;font-size:0.82rem;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="r-terms" required style="accent-color:var(--violet);width:15px;height:15px">
+          I agree to the <a href="#" style="color:var(--gold);text-decoration:none">Terms</a> &amp; <a href="#" style="color:var(--gold);text-decoration:none">Privacy Policy</a>
+        </label>
+
+        <button type="submit" class="btn btn-gold btn-full" id="regBtn" style="padding:14px;font-size:0.95rem">
+          <span id="regBtnText">Create Account →</span>
+        </button>
+      </form>
+
+      <p class="auth-link-text">Already have an account? <a href="login.html">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script>
+document.getElementById('regForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('regBtn');
+  const txt = document.getElementById('regBtnText');
+  btn.disabled = true; txt.textContent = 'Creating account…';
+
+  const name  = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const pw    = document.getElementById('r-pw').value;
+  const city  = document.getElementById('r-city').value.trim();
+
+  if (pw.length < 8) {
+    toast('Password must be at least 8 characters', 'e');
+    btn.disabled = false; txt.textContent = 'Create Account →'; return;
+  }
+
+  const res = await api.post('/auth/register', { name, email, password: pw, city });
+  if (res.ok) {
+    saveSession(res.data.token, res.data.user);
+    toast(`Welcome, ${name.split(' ')[0]}! 🎉`, 's');
+    setTimeout(() => location.href = 'index.html', 900);
+  } else {
+    toast(res.data.message || 'Registration failed', 'e');
+    btn.disabled = false; txt.textContent = 'Create Account →';
+  }
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Eventify</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">E</div>
+      <h2>Eventify</h2>
+      <span>Admin Console</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="events.html" class="nav-item"><span class="nav-icon">🎯</span> Browse Events</a>
+      <a href="nearby.html" class="nav-item"><span class="nav-icon">📍</span> Near Me</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">My Space</div>
+      <a href="bookings.html" class="nav-item"><span class="nav-icon">🎟️</span> My Bookings</a>
+      <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span> Profile</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Admin</div>
+      <a href="admin.html" class="nav-item active"><span class="nav-icon">⚙️</span> Admin Panel</a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="sidebarAvatar" style="background:linear-gradient(135deg,#ff6584,#ffc83c)">A</div>
+        <div>
+          <div class="user-name" id="sidebarName">Admin</div>
+          <div class="user-role" style="color:var(--accent2)">Administrator</div>
+        </div>
+        <button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem" title="Logout">⏏</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header slide-up">
+      <div class="page-header-left">
+        <h1>Admin Panel ⚙️</h1>
+        <p>Manage events, users, and bookings</p>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="openAddEventModal()"><span>+</span> New Event</button>
+      </div>
+    </div>
+
+    <!-- Admin Stats -->
+    <div class="stats-grid" style="margin-bottom:32px">
+      <div class="stat-card purple slide-up stagger-1">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-value" id="adminTotalEvents">0</div>
+        <div class="stat-label">Total Events</div>
+      </div>
+      <div class="stat-card green slide-up stagger-2">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="adminTotalUsers">0</div>
+        <div class="stat-label">Registered Users</div>
+      </div>
+      <div class="stat-card red slide-up stagger-3">
+        <div class="stat-icon">🎟️</div>
+        <div class="stat-value" id="adminTotalBookings">0</div>
+        <div class="stat-label">Total Bookings</div>
+      </div>
+      <div class="stat-card yellow slide-up stagger-4">
+        <div class="stat-icon">💺</div>
+        <div class="stat-value" id="adminSeatsAvail">0</div>
+        <div class="stat-label">Seats Available</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="admin-tabs slide-up">
+      <div class="admin-tab active" onclick="adminTab(this,'events')">Events</div>
+      <div class="admin-tab" onclick="adminTab(this,'users')">Users</div>
+      <div class="admin-tab" onclick="adminTab(this,'bookings')">Bookings</div>
+      <div class="admin-tab" onclick="adminTab(this,'seats')">Seat Manager</div>
+    </div>
+
+    <!-- Events Tab -->
+    <div id="tab-events">
+      <div class="filter-bar" style="margin-bottom:16px">
+        <div class="search-box" style="max-width:300px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="adminSearchEvents" placeholder="Search events…" oninput="renderAdminEvents()">
+        </div>
+        <select class="filter-select" id="adminCatFilter" onchange="renderAdminEvents()">
+          <option value="all">All Categories</option>
+          <option value="tech">Tech</option>
+          <option value="design">Design</option>
+          <option value="business">Business</option>
+          <option value="health">Health</option>
+        </select>
+      </div>
+      <div class="table-container slide-up stagger-1">
+        <table>
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Date</th>
+              <th>Speaker</th>
+              <th>City</th>
+              <th>Seats</th>
+              <th>Category</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminEventsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="tab-users" style="display:none">
+      <div class="table-container slide-up stagger-1">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>Role</th>
+              <th>Bookings</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bookings Tab -->
+    <div id="tab-bookings" style="display:none">
+      <div class="table-container slide-up stagger-1">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Event</th>
+              <th>Booked On</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminBookingsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Seat Manager Tab -->
+    <div id="tab-seats" style="display:none">
+      <div class="section-title">💺 Seat Management by Event</div>
+      <div id="seatManagerContainer" class="events-grid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Add/Edit Event Modal -->
+<div class="modal-overlay" id="addEventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="addEventModalTitle">Create New Event</h3>
+      <button class="modal-close" onclick="document.getElementById('addEventModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ae-id">
+      <div class="input-group"><label>Title</label><input id="ae-title" placeholder="Event title"></div>
+      <div class="input-group"><label>Description</label><textarea id="ae-desc" rows="2" style="resize:vertical"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="input-group"><label>Date</label><input type="date" id="ae-date"></div>
+        <div class="input-group"><label>Category</label>
+          <select id="ae-category">
+            <option value="tech">Tech</option>
+            <option value="design">Design</option>
+            <option value="business">Business</option>
+            <option value="health">Health</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="input-group"><label>Speaker</label><input id="ae-speaker"></div>
+        <div class="input-group"><label>Total Seats</label><input type="number" id="ae-seats" min="1"></div>
+      </div>
+      <div class="input-group"><label>Meeting Link</label><input id="ae-link"></div>
+      <div class="input-group"><label>City</label><input id="ae-city"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button class="btn btn-primary" onclick="submitEventForm()" style="flex:1;justify-content:center;border-radius:var(--radius-sm)" id="ae-submit-btn">Save Event</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('addEventModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Event?</h3>
+      <button class="modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px">This will permanently delete <strong id="deleteEventName" style="color:var(--text)"></strong> and all associated bookings.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-danger" onclick="confirmDelete()" style="flex:1;justify-content:center;border-radius:var(--radius-sm)">Delete</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('deleteModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
